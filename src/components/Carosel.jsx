@@ -31,7 +31,6 @@ const Reversed3DCarousel = () => {
     restDelta: 0.001
   });
 
-  // KEEP ORIGINAL SCROLL DIRECTION: Moves from right to left
   const x = useTransform(smoothProgress, [0, 1], ["60%", "-140%"]);
   const y = useTransform(smoothProgress, [0, 0.25], ["-15vh", "0vh"]);
 
@@ -40,8 +39,8 @@ const Reversed3DCarousel = () => {
       <div className="sticky top-0 h-screen flex items-center overflow-hidden">
         <motion.div 
           style={{ x, y }} 
-          // Negative space-x to maintain the tight overlap
-          className="flex -space-x-32 md:-space-x-64 px-[10vw] perspective-[3500px]"
+          // Added -webkit-perspective for Safari support
+          className="flex -space-x-32 md:-space-x-64 px-[10vw] [perspective:3500px] [-webkit-perspective:3500px]"
         >
           {items.map((item, index) => (
             <Card key={item.id} img={item.img} progress={smoothProgress} index={index} />
@@ -53,11 +52,7 @@ const Reversed3DCarousel = () => {
 };
 
 const Card = ({ img, progress, index }) => {
-  // REVERSED ANGLE LOGIC:
-  // rotateX: Flipped from negative to positive for reversed top-down view
   const rotateX = useTransform(progress, [0, 1], [25, 5]);
-
-  // rotateY: Flipped from negative start to positive start
   const rotateY = useTransform(
     progress,
     [0, 1],
@@ -66,8 +61,8 @@ const Card = ({ img, progress, index }) => {
 
   const scale = useTransform(progress, [0, 0.2], [0.85, 1]);
   
-  // Adjusted zIndex for the new overlap perspective
-  const zIndex = items.length - index;
+  // FIX FOR IPHONE: Physical Z-depth calculation
+  const translateZ = (items.length - index) * 1; 
 
   return (
     <motion.div
@@ -75,17 +70,19 @@ const Card = ({ img, progress, index }) => {
         rotateY,
         rotateX,
         scale,
-        zIndex,
+        z: translateZ, // This forces depth sorting on iPhone
+        zIndex: items.length - index,
         transformStyle: "preserve-3d",
       }}
-      className="relative shrink-0 w-[100vw] md:w-[35vw] aspect-video overflow-hidden shadow-[0_50px_100px_rgba(0,0,0,0.6)]"
+      // Added transform-gpu to prevent disappearing images on iOS scroll
+      className="relative shrink-0 w-[100vw] md:w-[35vw] aspect-video overflow-hidden shadow-[0_50px_100px_rgba(0,0,0,0.6)] transform-gpu"
     >
       <img
         src={img}
         alt="Jewelry Piece"
-        className="w-[900px] h-full "
+        // Added block and w-full to ensure layout stability
+        className="w-full h-full object-cover block"
       />
-      {/* Reversed lighting gradient for the new slant */}
       <div className="absolute inset-0 bg-gradient-to-bl from-black/40 via-transparent to-white/10 pointer-events-none" />
     </motion.div>
   );

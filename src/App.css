@@ -1,0 +1,8 @@
+.pin-spacer {
+  overflow: hidden !important;
+}
+
+body {
+  overflow-x: hidden;
+  width: 100%;
+}

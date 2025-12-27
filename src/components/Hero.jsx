@@ -1,125 +1,165 @@
 import React, { useEffect, useRef } from 'react';
 import gsap from 'gsap';
+import LightRays from './Bg';
 
 const Hero = () => {
   const containerRef = useRef(null);
   const titleRef = useRef(null);
-  const navRef = useRef(null);
-  const footerRef = useRef(null);
 
-  // Optimized split text function
+  // Helper to split text into individual spans for GSAP stagger animations
   const splitLetters = (text) => {
     if (!text) return null;
     return text.split("").map((char, i) => (
-      <span 
-        key={i} 
-        className="letter inline-block transform-gpu" // transform-gpu forces hardware acceleration
-        style={{ willChange: 'transform, opacity' }}
-      >
+      <span key={i} className="letter inline-block transform-gpu will-change-transform">
         {char === " " ? "\u00A0" : char}
       </span>
     ));
   };
 
   useEffect(() => {
-    // 1. Create a GSAP Context (Crucial for React 18 cleanup)
     let ctx = gsap.context(() => {
       const tl = gsap.timeline({
-        defaults: { ease: "expo.out", duration: 1.2 }
+        defaults: { ease: "expo.out" }
       });
 
-      // Clear any initial flicker by setting initial state
-      gsap.set(".letter", { opacity: 0, y: 50 });
+      // 1. Set initial hidden states (Z-axis rotation for 3D flip effect)
+      gsap.set(".letter", { 
+        opacity: 0, 
+        y: 80, 
+        rotateX: -90, 
+        z: -100 
+      });
+      gsap.set(".border-line", { scaleX: 0 });
+      gsap.set(".nav-container", { y: -20, opacity: 0 });
 
-      tl.to(containerRef.current, { 
-        backgroundColor: "#8b644f", 
-        duration: 1.5 
-      })
-      .to(".nav-item .letter", {
-        opacity: 1,
-        y: 0,
-        stagger: 0.01,
-        duration: 0.8
-      }, 0.2)
-      .to(".main-title .letter", {
+      // 2. Entrance Animation Sequence
+      tl.to(".main-title .letter", {
         opacity: 1,
         y: 0,
         rotateX: 0,
-        stagger: 0.1,
-        duration: 1.5,
-        // Adding a slight 3D rotation effect
-        startAt: { rotateX: -90 }
-      }, 0.4)
-      .to(".footer-info .letter", {
+        z: 0,
+        stagger: { amount: 0.6, from: "center" },
+        duration: 1.8,
+        ease: "elastic.out(1, 0.8)"
+      })
+      .to(".nav-container", {
+        y: 0,
+        opacity: 1,
+        duration: 1,
+      }, "-=1.2")
+      .to(".nav-item .letter, .footer-info .letter", {
         opacity: 1,
         y: 0,
-        stagger: 0.003, // Faster stagger for body text
-        duration: 0.8
-      }, 0.6)
-      .from(".border-line", {
-        scaleX: 0,
-        duration: 1.5,
+        rotateX: 0,
+        z: 0,
+        stagger: 0.01,
+        duration: 0.8,
+      }, "-=0.8")
+      .to(".border-line", {
+        scaleX: 1,
+        duration: 1.2,
         ease: "power3.inOut"
-      }, 0.5);
+      }, "-=0.5");
+
+      // 3. Smooth Mouse Parallax (Follows mouse movement)
+      const handleMouseMove = (e) => {
+        const { clientX, clientY } = e;
+        const xPos = (clientX / window.innerWidth - 0.5) * 30;
+        const yPos = (clientY / window.innerHeight - 0.5) * 30;
+
+        gsap.to(titleRef.current, {
+          x: xPos,
+          y: yPos,
+          duration: 1.5,
+          ease: "power2.out"
+        });
+        
+        gsap.to(".light-bg", {
+          x: -xPos,
+          y: -yPos,
+          duration: 2,
+          ease: "power2.out"
+        });
+      };
+
+      window.addEventListener("mousemove", handleMouseMove);
+      return () => window.removeEventListener("mousemove", handleMouseMove);
 
     }, containerRef);
 
-    // 2. Cleanup function to kill animations on unmount
-    return () => ctx.revert();
+    return () => ctx.revert(); // Cleanup GSAP context
   }, []);
 
   return (
     <section 
       ref={containerRef}
-      style={{ perspective: '1000px' }} // Enables 3D rotation without distortion
-      className="relative w-full h-screen bg-[#a37a63] text-black px-6 py-8 flex flex-col justify-between overflow-hidden selection:bg-black selection:text-[#8c6d55]"
+      className="relative w-full h-screen bg-[#050505] text-white px-6 py-8 flex flex-col justify-between overflow-hidden antialiased"
+      style={{ perspective: '1200px' }}
     >
-      {/* Top Navigation Bar */}
-      <nav ref={navRef} className="flex justify-between items-start w-full uppercase tracking-widest text-[13px] font-medium z-10">
-        <div className="nav-item text-4xl font-semibold tracking-tighter leading-none">
-          {splitLetters("MILL3")}
+      {/* --- BACKGROUND LAYER --- */}
+      <div className="light-bg absolute inset-0 z-0 pointer-events-none">
+        <LightRays
+          raysOrigin="top-center"
+          raysColor="#00e5ff"
+          raysSpeed={1.0}
+          lightSpread={0.8}
+          className="w-full h-full opacity-40"
+        />
+        {/* Vignette to focus center */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,#050505_85%)]" />
+      </div>
+
+      {/* --- NAVIGATION LAYER --- */}
+      <nav className="nav-container relative z-10 flex justify-between items-center w-full uppercase tracking-[0.2em] text-[10px] ">
+        <div className="nav-item text-2xl md:text-3xl  tracking-tighter leading-none italic">
+          {splitLetters("BLAZE")}
         </div>
         
-        <div className="hidden md:flex gap-40 absolute left-1/2 -translate-x-1/2">
-          <a href="#projects" className="nav-item hover:opacity-50 transition-opacity">
+        <div className="hidden lg:flex gap-20 absolute left-1/2 -translate-x-1/2">
+          <a href="#projects" className="nav-item hover:text-cyan-400 transition-colors duration-500">
             {splitLetters("Projects")}
           </a>
-          <a href="#about" className="nav-item hover:opacity-50 transition-opacity">
+          <a href="#about" className="nav-item hover:text-cyan-400 transition-colors duration-500">
             {splitLetters("About")}
           </a>
         </div>
 
-        <div className="flex gap-10">
-          <a href="#contact" className="nav-item hover:opacity-50 transition-opacity">
+        <div className="flex gap-4 md:gap-10 items-center">
+          <a href="#contact" className="nav-item border border-white/20 px-5 py-2 rounded-full hover:bg-white hover:text-black transition-all duration-500">
             {splitLetters("Contact")}
           </a>
-          <span className="nav-item cursor-pointer">{splitLetters("[FR]")}</span>
+          <span className="nav-item hidden sm:inline-block opacity-40 hover:opacity-100 transition-opacity cursor-pointer">
+            {splitLetters("[EN]")}
+          </span>
         </div>
       </nav>
 
-      {/* Main Brand Title */}
-      <div className="flex-1 flex flex-col justify-center select-none">
-        <h1 ref={titleRef} className="main-title text-[25vw] font-medium tracking-tight leading-[0.8] uppercase flex justify-center">
-          {splitLetters("MYEL")}
+      {/* --- CENTER TITLE LAYER --- */}
+      <div className="relative z-10 flex-1 flex flex-col justify-center items-center select-none">
+        <h1 
+          ref={titleRef} 
+          className="main-title text-[28vw] md:text-[22vw]  tracking-tighter leading-[0.75] uppercase text-center text-white mix-blend-difference"
+        >
+          {splitLetters("BLAZE")}
         </h1>
+        {/* Subtle cyan glow behind text */}
+        <div className="absolute w-[60vw] h-[25vh] bg-cyan-500/5 blur-[100px] rounded-full -z-10" />
       </div>
 
-      {/* Footer Info Section */}
-      <div ref={footerRef} className="flex flex-col md:flex-row justify-between items-end w-full pt-6 relative">
-        <div className="border-line absolute top-0 left-0 w-full h-[1px] bg-black/20 origin-left" />
+      {/* --- FOOTER INFO LAYER --- */}
+      <div className="relative z-10 w-full">
+        <div className="border-line w-full h-[1px] bg-gradient-to-r from-transparent via-white/20 to-transparent mb-8" />
 
-        <div className="footer-info text-[11px] uppercase tracking-widest font-bold">
-          <a href="#projects" className="underline underline-offset-4 decoration-1">
-            {splitLetters("Projects")}
-          </a> 
-          <span className="mx-2">—</span>
-          {splitLetters("MYEL")}
-        </div>
-        
-        <div className="footer-info max-w-[300px] text-right mt-4 md:mt-0">
-          <p className="text-[12px] leading-tight uppercase tracking-wider font-semibold">
-            {splitLetters("High-end and responsible jewelry store. MYEL jewelry is made in Montreal and designed to stand the test of time.")}
-          </p>
+        <div className="flex flex-col md:flex-row justify-between items-end gap-6 pb-2">
+          <div className="footer-info text-[10px] uppercase tracking-[0.4em] font-black opacity-80">
+            <span className="text-cyan-400">©2025</span> — {splitLetters("DIGITAL ARCHIVE")}
+          </div>
+          
+          <div className="footer-info max-w-[320px] text-right">
+            <p className="text-[10px] md:text-[11px] leading-relaxed uppercase tracking-[0.15em] font-semibold opacity-50">
+              {splitLetters("Pushing the boundaries of digital interaction through high-end design and cinematic motion experiences.")}
+            </p>
+          </div>
         </div>
       </div>
     </section>
